@@ -1,0 +1,71 @@
+#!/usr/bin/ruby
+
+require 'optparse'
+require "suse/connect"
+
+options = {
+    :exact_match => false,
+}
+
+STDOUT.sync = true
+
+save_argv = Array.new(ARGV)
+
+OptionParser.new do |opts|
+  opts.banner = "Usage: zypper package-search [options] package1 [package2 [...]]"
+
+  opts.on("-e", "--exact-match", "Only report exact names for package") do |a|
+    options[:exact_match] = a
+  end
+
+end.parse!
+
+results = []
+
+ARGV.each do |pkg_name|
+  begin
+    found = SUSE::Connect::PackageSearch.search pkg_name
+  rescue => e
+    print "Could not search for the package: #{e.class}: #{e.message}\n"
+    exit 1
+  end
+ 
+  if options[:exact_match]
+    found.select! do | pkg |
+      pkg["name"] == pkg_name
+    end
+  end
+
+  found.each do | pkg |
+    name = pkg["name"]
+    version = pkg["version"]
+    release = pkg["release"]
+    arch = pkg["arch"]
+    pkg["products"].each do | product |
+      p_name = product["name"]
+      p_id = product["identifier"]
+      p_edition = product["edition"]
+      p_arch = product["architecture"]
+      results.push([name, version, release, arch, p_id, p_name, p_edition, p_arch])
+    end
+  end
+end
+
+if results.empty?
+  puts "No package found\n\n"
+  exit 0
+end
+
+
+puts "Following packages were found in following modules:\n\n"
+results.map! { | entry |
+  [ entry[0], entry[5] ]
+}.uniq.each do | entry |
+  puts "#{entry[0]}: #{entry[1]}"
+end
+puts "\n"
+puts "To activate respective module or product, use SUSEConnect --product.\nUse SUSEConnect --help for more details.\n\n"
+
+exit 0
+
+
