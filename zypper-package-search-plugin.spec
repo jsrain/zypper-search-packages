@@ -28,11 +28,13 @@ Source2:        COPYING
 Summary:        Zypper subcommand for online package search
 License:        GPL-2.0
 Group:          System/Packages
+Url:            https://github.com/jsrain/zypper-package-search
 BuildArch:      noarch
 Supplements:    packageand(zypper:SUSEConnect)
 
 %description
-Zypper subcommand for online package search.
+Zypper subcommand for online package search via
+the API of the SUSE Customer Center.
 
 %prep
 
