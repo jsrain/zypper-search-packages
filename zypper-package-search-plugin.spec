@@ -24,6 +24,7 @@ BuildRoot:      %{_tmppath}/%{name}-%{version}-build
 BuildRequires:  ruby-macros >= 5
 BuildRequires:  zypper >= 1.11.38
 Source1:        zypper-package-search
+Source2:        COPYING
 Summary:        Zypper subcommand for online package search
 License:        GPL-2.0
 Group:          System/Packages
@@ -40,10 +41,12 @@ Zypper subcommand for online package search.
 %install
 mkdir -p $RPM_BUILD_ROOT/usr/lib/zypper/commands
 install -m 755 %{S:1} $RPM_BUILD_ROOT/usr/lib/zypper/commands/
+install -d ${RPM_BUILD_ROOT}%{_defaultlicensedir}/%{name}
+install -m 644 %{S:2} ${RPM_BUILD_ROOT}%{_defaultlicensedir}/%{name}
 
 %files
 %defattr(-,root,root,-)
 /usr/lib/zypper/commands
-
+%license COPYING
 
 %changelog
