@@ -29,7 +29,7 @@ ARGV.each do |pkg_name|
     print "Could not search for the package: #{e.class}: #{e.message}\n"
     exit 1
   end
- 
+
   if options[:exact_match]
     found.select! do | pkg |
       pkg["name"] == pkg_name
