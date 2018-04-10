@@ -4,7 +4,7 @@ require 'optparse'
 require "suse/connect"
 
 options = {
-    :exact_match => false,
+    :match_exact => false,
 }
 
 STDOUT.sync = true
@@ -14,8 +14,8 @@ save_argv = Array.new(ARGV)
 OptionParser.new do |opts|
   opts.banner = "Usage: zypper package-search [options] package1 [package2 [...]]"
 
-  opts.on("-e", "--exact-match", "Only report exact names for package") do |a|
-    options[:exact_match] = a
+  opts.on("-x", "--match-exact", "Searches for an exact match of the search strings.") do |a|
+    options[:match_exact] = a
   end
 
 end.parse!
@@ -30,7 +30,7 @@ ARGV.each do |pkg_name|
     exit 1
   end
 
-  if options[:exact_match]
+  if options[:match_exact]
     found.select! do | pkg |
       pkg["name"] == pkg_name
     end
