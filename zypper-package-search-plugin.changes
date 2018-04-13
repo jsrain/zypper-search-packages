@@ -1,4 +1,9 @@
 -------------------------------------------------------------------
+Fri Apr 13 09:05:48 UTC 2018 - jsrain@suse.cz
+
+- Added more output options
+
+-------------------------------------------------------------------
 Tue Apr 10 11:03:57 UTC 2018 - okurz@suse.com
 
 - Extend help text stating the RMT/SCC query (bsc#1088806)

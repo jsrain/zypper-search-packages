@@ -1,10 +1,15 @@
 #!/usr/bin/ruby
 
 require 'optparse'
+require 'rexml/document'
 require "suse/connect"
 
 options = {
     :match_exact => false,
+    :exact_match => false,
+    :xmlout => false,
+    :group_by_module => false,
+    :details => false
 }
 
 STDOUT.sync = true
@@ -24,6 +29,15 @@ name unless the option --match-exact is used.
 
   opts.on("-x", "--match-exact", "Searches for an exact match of the search strings.") do |a|
     options[:match_exact] = a
+  end
+  opts.on("-g", "--group-by-module", "Group the results by module (default: group by package)") do |a|
+    options[:group_by_module] = a
+  end
+  opts.on("-d", "--details", "Display more detailed information about found packages") do |a|
+    options[:details] = a
+  end
+  opts.on("-x", "--xmlout", "Switch to XML output") do |a|
+    options[:xmlout] = a
   end
 
 end.parse!
@@ -60,17 +74,79 @@ ARGV.each do |pkg_name|
 end
 
 if results.empty?
-  puts "No package found\n\n"
+  if ! options[:xmlout]
+    puts "No package found\n\n"
+    exit 0
+  end
+end
+
+if options[:xmlout]
+  doc = REXML::Document.new "<packages></packages>"
+  results.each do | entry |
+    x_package = REXML::Element.new "package"
+    x_name = REXML::Element.new "name"
+    x_name.add_text "#{entry[0]}-#{entry[1]}-#{entry[2]}.#{entry[3]}"
+    x_module = REXML::Element.new "module"
+    x_module.add_text "#{entry[4]}"
+    x_package.add_element x_name
+    x_package.add_element x_module
+    doc.root.push x_package
+  end
+  doc << REXML::XMLDecl.new
+  doc.write($stdout, 2)
+  puts "\n"
   exit 0
 end
 
 
 puts "Following packages were found in following modules:\n\n"
-results.map! { | entry |
-  [ entry[0], entry[5] ]
-}.uniq.each do | entry |
-  puts "#{entry[0]}: #{entry[1]}"
+
+if options[:details]
+  results.map! { | entry |
+    [ "#{entry[0]}-#{entry[1]}-#{entry[2]}.#{entry[3]}", entry[4] ]
+  }
+else
+  results.map! { | entry |
+    [ entry[0], entry[5] ]
+  }
 end
+results.uniq!
+
+header = ["Name", "Module"]
+if options[:group_by_module]
+  modules = {}
+  results.each do | entry |
+    modules[entry[1]] ||= [];
+    modules[entry[1]].push entry[0];
+  end
+  results = []
+  modules.each do | mod, packages |
+    pkg = packages.shift
+    results.push [ mod, pkg ]
+    packages.each do | pkg |
+      results.push [ "", pkg ]
+    end
+  end
+  header = ["Module", "Name"]
+end
+#else
+  results.unshift header
+  max_lengths = [0, 0]
+  results.each do |x|
+    x.each_with_index do |e, i|
+      s = e.size
+      max_lengths[i] = s if s > max_lengths[i]
+    end
+  end
+
+  separator = max_lengths.map { |_| "-" * _ }
+  results.insert(1, separator)
+
+  format = max_lengths.map { |_| "%-#{_}s" }.join(" " * 2)
+  results.each do | entry |
+    puts format % entry
+  end
+#end
 puts "\n"
 puts "To activate the respective module or product, use SUSEConnect --product.\nUse SUSEConnect --help for more details.\n\n"
 
