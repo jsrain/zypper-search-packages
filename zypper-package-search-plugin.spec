@@ -1,7 +1,7 @@
 #
-# spec file for package zypper-package-search
+# spec file for package zypper-package-search-plugin
 #
-# Copyright (c) 2018 SUSE LINUX Products GmbH, Nuernberg, Germany.
+# Copyright (c) 2018 SUSE LINUX GmbH, Nuernberg, Germany.
 #
 # All modifications and additions to the file contributed by third parties
 # remain the property of their copyright owners, unless otherwise agreed
@@ -15,22 +15,22 @@
 # Please submit bugfixes or comments via http://bugs.opensuse.org/
 #
 
+
 Name:           zypper-package-search-plugin
-Version:        0.1
+Version:        0.2
 Release:        0
-Requires:       rubygem(%{rb_default_ruby_abi}:suse-connect) >= 0.3.9
-Requires:       zypper >= 1.11.38
-BuildRoot:      %{_tmppath}/%{name}-%{version}-build
+Summary:        Zypper subcommand for online package search
+License:        GPL-2.0-only
+Group:          System/Packages
+URL:            https://github.com/jsrain/zypper-package-search
+Source0:        zypper-package-search
+Source1:        COPYING
 BuildRequires:  ruby-macros >= 5
 BuildRequires:  zypper >= 1.11.38
-Source1:        zypper-package-search
-Source2:        COPYING
-Summary:        Zypper subcommand for online package search
-License:        GPL-2.0
-Group:          System/Packages
-Url:            https://github.com/jsrain/zypper-package-search
-BuildArch:      noarch
+Requires:       zypper >= 1.11.38
+Requires:       rubygem(%{rb_default_ruby_abi}:suse-connect) >= 0.3.9
 Supplements:    packageand(zypper:SUSEConnect)
+BuildArch:      noarch
 
 %description
 Zypper subcommand for online package search via
@@ -42,13 +42,12 @@ the API of the SUSE Customer Center.
 
 %install
 mkdir -p $RPM_BUILD_ROOT/usr/lib/zypper/commands
-install -m 755 %{S:1} $RPM_BUILD_ROOT/usr/lib/zypper/commands/
+install -m 755 %{S:0} $RPM_BUILD_ROOT/usr/lib/zypper/commands/
 install -d ${RPM_BUILD_ROOT}%{_defaultlicensedir}/%{name}
-install -m 644 %{S:2} ${RPM_BUILD_ROOT}%{_defaultlicensedir}/%{name}
+install -m 644 %{S:1} ${RPM_BUILD_ROOT}%{_defaultlicensedir}/%{name}
 
 %files
-%defattr(-,root,root,-)
-/usr/lib/zypper/commands
 %license COPYING
+%{_prefix}/lib/zypper/commands
 
 %changelog
