@@ -1,4 +1,10 @@
 -------------------------------------------------------------------
+Mon Apr 16 13:12:16 UTC 2018 - dimstar@opensuse.org
+
+- Don't use obsolete $RPM_ shell variables.
+- Prepare for the package to be maintained by source services.
+
+-------------------------------------------------------------------
 Fri Apr 13 09:19:00 UTC 2018 - jsrain@suse.cz
 
 - Added more output options
