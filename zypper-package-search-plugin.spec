@@ -23,8 +23,7 @@ Summary:        Zypper subcommand for online package search
 License:        GPL-2.0-only
 Group:          System/Packages
 URL:            https://github.com/jsrain/zypper-package-search
-Source0:        zypper-package-search
-Source1:        COPYING
+Source0:        zypper-package-search-git.tar.xz
 BuildRequires:  ruby-macros >= 5
 BuildRequires:  zypper >= 1.11.38
 Requires:       zypper >= 1.11.38
@@ -37,14 +36,13 @@ Zypper subcommand for online package search via
 the API of the SUSE Customer Center.
 
 %prep
+%setup -q -n zypper-package-search-git
 
 %build
 
 %install
-mkdir -p $RPM_BUILD_ROOT/usr/lib/zypper/commands
-install -m 755 %{S:0} $RPM_BUILD_ROOT/usr/lib/zypper/commands/
-install -d ${RPM_BUILD_ROOT}%{_defaultlicensedir}/%{name}
-install -m 644 %{S:1} ${RPM_BUILD_ROOT}%{_defaultlicensedir}/%{name}
+mkdir -p %{buildroot}%{_prefix}/lib/zypper/commands
+install -m 755 zypper-package-search %{buildroot}%{_prefix}/lib/zypper/commands/
 
 %files
 %license COPYING
