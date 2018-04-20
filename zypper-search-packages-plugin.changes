@@ -1,4 +1,10 @@
 -------------------------------------------------------------------
+Fri Apr 20 06:37:28 UTC 2018 - jsrain@suse.cz
+
+- renamed the command to 'zypper-search-packages'
+- 0.3
+
+-------------------------------------------------------------------
 Mon Apr 16 13:12:16 UTC 2018 - dimstar@opensuse.org
 
 - Don't use obsolete $RPM_ shell variables.

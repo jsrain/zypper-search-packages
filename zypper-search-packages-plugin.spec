@@ -1,5 +1,5 @@
 #
-# spec file for package zypper-package-search-plugin
+# spec file for package zypper-search-packages-plugin
 #
 # Copyright (c) 2018 SUSE LINUX GmbH, Nuernberg, Germany.
 #
@@ -16,19 +16,21 @@
 #
 
 
-Name:           zypper-package-search-plugin
-Version:        0.2
+Name:           zypper-search-packages-plugin
+Version:        0.3
 Release:        0
 Summary:        Zypper subcommand for online package search
 License:        GPL-2.0-only
 Group:          System/Packages
-URL:            https://github.com/jsrain/zypper-package-search
-Source0:        zypper-package-search-git.tar.xz
+URL:            https://github.com/jsrain/zypper-search-packages
+Source0:        zypper-search-packages-git.tar.xz
 BuildRequires:  ruby-macros >= 5
 BuildRequires:  zypper >= 1.11.38
 Requires:       zypper >= 1.11.38
 Requires:       rubygem(%{rb_default_ruby_abi}:suse-connect) >= 0.3.9
 Supplements:    packageand(zypper:SUSEConnect)
+Obsoletes:	zypper-package-search-plugin
+Provides:	zypper-package-search-plugin
 BuildArch:      noarch
 
 %description
@@ -36,13 +38,13 @@ Zypper subcommand for online package search via
 the API of the SUSE Customer Center.
 
 %prep
-%setup -q -n zypper-package-search-git
+%setup -q -n zypper-search-packages-git
 
 %build
 
 %install
 mkdir -p %{buildroot}%{_prefix}/lib/zypper/commands
-install -m 755 zypper-package-search %{buildroot}%{_prefix}/lib/zypper/commands/
+install -m 755 zypper-search-packages %{buildroot}%{_prefix}/lib/zypper/commands/
 
 %files
 %license COPYING

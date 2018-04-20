@@ -1,1 +1,1 @@
-# zypper-package-search
+# zypper-search-packages

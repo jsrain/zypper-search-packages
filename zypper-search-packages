@@ -17,7 +17,7 @@ STDOUT.sync = true
 save_argv = Array.new(ARGV)
 
 OptionParser.new do |opts|
-  opts.banner = "Usage: zypper package-search [options] package1 [package2 [...]]
+  opts.banner = "Usage: zypper search-packages [options] package1 [package2 [...]]
 
 Extended search for packages covering all potential SLE modules by querying RMT/SCC.
 This operation needs access to a network.
