@@ -30,7 +30,6 @@ Requires:       zypper >= 1.11.38
 Requires:       rubygem(%{rb_default_ruby_abi}:suse-connect) >= 0.3.9
 Supplements:    packageand(zypper:SUSEConnect)
 Obsoletes:	zypper-package-search-plugin
-Provides:	zypper-package-search-plugin
 BuildArch:      noarch
 
 %description
