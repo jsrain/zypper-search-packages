@@ -2,7 +2,61 @@
 
 require 'optparse'
 require 'rexml/document'
+require 'pathname'
 require "suse/connect"
+
+def search_pkgs_in_repos(options, search_pat)
+  base_path = '/var/cache/zypp/solv'
+  repos = Dir[File.join(base_path, '*')]
+  
+  local_results = []
+  ret = []
+  
+  repos.each do | repo |
+    pn = Pathname.new(repo)
+    reponame = pn.basename.to_s
+    pkg_status = 'Available'
+  
+    if reponame == '@System'
+      reponame = 'Installed'
+      pkg_status = 'Installed'
+    end
+  
+    index_file = File.join(repo, 'solv.idx')
+    begin
+      File.open(index_file).each do | line |
+        components = line.chomp.split("\t")
+        name = components[0]
+        version = components[1]
+	release = ''
+	version_l = version.split('-')
+	if version_l.size > 1
+	  release = version_l.pop
+	  version = version_l.join('-')
+	end
+        arch = components[2]
+        local_results.push([name, version, release, arch, reponame, pkg_status, '', ''])
+      end
+    rescue => e
+      print "Cannot read index for repository #{reponame}.\n"
+    end
+  end
+  
+  local_results.each do | p |
+    search_pat.each do | q |
+      if options[:match_exact]
+        if p[0] == q
+          ret.push p
+        end
+      else
+        if p[0].include? q
+          ret.push p
+        end
+      end
+    end
+  end
+  return ret
+end
 
 options = {
     :match_exact => false,
@@ -15,6 +69,7 @@ options = {
 STDOUT.sync = true
 
 save_argv = Array.new(ARGV)
+params = ARGV
 
 OptionParser.new do |opts|
   opts.banner = "Usage: zypper search-packages [options] package1 [package2 [...]]
@@ -36,7 +91,7 @@ name unless the option --match-exact is used.
   opts.on("-d", "--details", "Display more detailed information about found packages") do |a|
     options[:details] = a
   end
-  opts.on("-x", "--xmlout", "Switch to XML output") do |a|
+  opts.on("", "--xmlout", "Switch to XML output") do |a|
     options[:xmlout] = a
   end
 
@@ -44,12 +99,12 @@ end.parse!
 
 results = []
 
-ARGV.each do |pkg_name|
+params.each do |pkg_name|
   begin
     found = SUSE::Connect::PackageSearch.search pkg_name
   rescue => e
     print "Could not search for the package: #{e.class}: #{e.message}\n"
-    exit 1
+    found = []
   end
 
   if options[:match_exact]
@@ -72,6 +127,10 @@ ARGV.each do |pkg_name|
     end
   end
 end
+
+
+repo_results = search_pkgs_in_repos(options, params)
+results.concat repo_results
 
 if results.empty?
   if ! options[:xmlout]
@@ -112,7 +171,7 @@ else
 end
 results.uniq!
 
-header = ["Name", "Module"]
+header = ["Package", "Module or Repository"]
 if options[:group_by_module]
   modules = {}
   results.each do | entry |
@@ -127,7 +186,7 @@ if options[:group_by_module]
       results.push [ "", pkg ]
     end
   end
-  header = ["Module", "Name"]
+  header = ["Module or Repository", "Package"]
 end
 #else
   results.unshift header

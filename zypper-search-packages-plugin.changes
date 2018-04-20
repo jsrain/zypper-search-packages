@@ -1,7 +1,8 @@
 -------------------------------------------------------------------
-Fri Apr 20 06:37:28 UTC 2018 - jsrain@suse.cz
+Fri Apr 20 12:06:50 UTC 2018 - jsrain@suse.cz
 
 - renamed the command to 'zypper-search-packages'
+- extended the search to installed and available packages
 - 0.3
 
 -------------------------------------------------------------------
