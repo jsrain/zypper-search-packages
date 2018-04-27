@@ -17,7 +17,7 @@
 
 
 Name:           zypper-search-packages-plugin
-Version:        0.3
+Version:        0.4
 Release:        0
 Summary:        Zypper subcommand for online package search
 License:        GPL-2.0-only
@@ -31,6 +31,9 @@ Requires:       rubygem(%{rb_default_ruby_abi}:suse-connect) >= 0.3.9
 Supplements:    packageand(zypper:SUSEConnect)
 Obsoletes:	zypper-package-search-plugin
 BuildArch:      noarch
+# SUSEConnect does not build for i586 and s390 and is not supported on those architectures
+# bsc#1088552
+ExcludeArch:    %ix86 s390
 
 %description
 Zypper subcommand for online package search via
@@ -44,9 +47,11 @@ the API of the SUSE Customer Center.
 %install
 mkdir -p %{buildroot}%{_prefix}/lib/zypper/commands
 install -m 755 zypper-search-packages %{buildroot}%{_prefix}/lib/zypper/commands/
+install -m 644 zypper-search-packages.8 $RPM_BUILD_ROOT/%{_mandir}/man8/
 
 %files
 %license COPYING
 %{_prefix}/lib/zypper/commands
+%{_mandir}/man8/*
 
 %changelog

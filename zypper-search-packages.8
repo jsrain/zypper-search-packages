@@ -1,0 +1,32 @@
+.\" Manpage for zypper-search-packages.
+.TH man 8 "18 Apr 2016" "1.0" "zypper-search-packages man page"
+.SH NAME
+zypper-search-packages \- extended search for packages
+.SH SYNOPSIS
+zypper search-packages [options] package1 [package2 [...]]
+.SH DESCRIPTION
+zypper search-packages performs wxtended search for packages covering
+all potential SLE modules by querying RMT/SCC.
+This operation needs access to a network.
+
+Same as for the normal search operation the search string can be a part of a package
+name unless the option --match-exact is used.
+.SH OPTIONS
+.TP
+.B -x, --match-exact
+Searches for an exact match of the search strings
+.TP
+.B -g, --group-by-module
+Group the results by module (default: group by package)
+.TP
+.B -d, --details
+Display more detailed information about found packages
+.TP
+.B --xmlout
+Switch to XML output
+.SH SEE ALSO
+zypper(8)
+.SH BUGS
+No known bugs.
+.SH AUTHOR
+Jiri Srain <jsrain@suse.com>
