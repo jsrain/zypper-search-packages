@@ -45,7 +45,7 @@ the API of the SUSE Customer Center.
 %build
 
 %install
-mkdir -p %{buildroot}%{_prefix}/lib/zypper/commands
+mkdir -p %{buildroot}%{_prefix}/lib/zypper/commands $RPM_BUILD_ROOT/%{_mandir}/man8
 install -m 755 zypper-search-packages %{buildroot}%{_prefix}/lib/zypper/commands/
 install -m 644 zypper-search-packages.8 $RPM_BUILD_ROOT/%{_mandir}/man8/
 
