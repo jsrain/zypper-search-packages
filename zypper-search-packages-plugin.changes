@@ -1,4 +1,10 @@
 -------------------------------------------------------------------
+Tue May 15 06:16:23 UTC 2018 - jsrain@suse.cz
+
+- include the module ID with its user-readable name (bsc#1092922)
+- 0.5
+
+-------------------------------------------------------------------
 Fri Apr 27 11:25:02 UTC 2018 - jsrain@suse.cz
 
 - do not build on 32-bit architectures (bsc#1088552)

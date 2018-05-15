@@ -121,6 +121,7 @@ params.each do |pkg_name|
     pkg["products"].each do | product |
       p_name = product["name"]
       p_id = product["identifier"]
+      p_name = "#{p_name} (#{p_id})"
       p_edition = product["edition"]
       p_arch = product["architecture"]
       results.push([name, version, release, arch, p_id, p_name, p_edition, p_arch])
