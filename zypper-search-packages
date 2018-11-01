@@ -124,7 +124,12 @@ params.each do |pkg_name|
       p_name = "#{p_name} (#{p_id})"
       p_edition = product["edition"]
       p_arch = product["architecture"]
-      results.push([name, version, release, arch, p_id, p_name, p_edition, p_arch])
+      p_free = product["free"]
+      p_connect_string = "SUSEConnect --product #{p_id}"
+      unless p_free
+        p_connect_string += " -r ADDITIONAL REGCODE"
+      end
+      results.push([name, version, release, arch, p_id, p_name, p_edition, p_arch, p_free, p_connect_string])
     end
   end
 end
@@ -167,12 +172,12 @@ if options[:details]
   }
 else
   results.map! { | entry |
-    [ entry[0], entry[5] ]
+    [ entry[0], entry[5], entry[9].to_s ]
   }
 end
 results.uniq!
 
-header = ["Package", "Module or Repository"]
+header = ["Package", "Module or Repository", "SUSEConnect Activation Command"]
 if options[:group_by_module]
   modules = {}
   results.each do | entry |
@@ -191,7 +196,7 @@ if options[:group_by_module]
 end
 #else
   results.unshift header
-  max_lengths = [0, 0]
+  max_lengths = header.size.times.map {0}
   results.each do |x|
     x.each_with_index do |e, i|
       s = e.size
