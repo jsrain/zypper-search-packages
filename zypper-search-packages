@@ -66,36 +66,136 @@ options = {
     :details => false
 }
 
+unsupported = false
+
+unsupported_reasons = Array.new
+
 STDOUT.sync = true
 
 save_argv = Array.new(ARGV)
 params = ARGV
 
-OptionParser.new do |opts|
-  opts.banner = "Usage: zypper search-packages [options] package1 [package2 [...]]
+begin
+  OptionParser.new do |opts|
+    opts.banner = "Usage: zypper search-packages [options] package1 [package2 [...]]
+  
+  Extended search for packages covering all potential SLE modules by querying RMT/SCC.
+  This operation needs access to a network.
+  
+  Same as for the normal search operation the search string can be a part of a package
+  name unless the option --match-exact is used.
+  
+  "
+  
+    opts.on("--match-substrings", "Search for a match to partial words (default).") do |a|
+    end
+    opts.on("--match-words", "Search for a match to whole words only. Not supported by extended search.") do |a|
+      unsupported = true
+      unsupported_reasons.push "Extended search does not support search by whole words."
+    end
+    opts.on("-x", "--match-exact", "Search for an exact match of the search strings.") do |a|
+      options[:match_exact] = a
+    end
+    opts.on("--provides", "Search for packages which provide the search strings.") do |a|
+      unsupported = true
+      unsupported_reasons.push "Extended search does not support search by dependencies."
+    end
+    opts.on("--recommends", "Search for packages which recommend the search strings.") do |a|
+      unsupported = true
+      unsupported_reasons.push "Extended search does not support search by dependencies."
+    end
+    opts.on("--requires", "Search for packages which require the search strings.") do |a|
+      unsupported = true
+      unsupported_reasons.push "Extended search does not support search by dependencies."
+    end
+    opts.on("--suggests", "Search for packages which suggest the search strings.") do |a|
+      unsupported = true
+      unsupported_reasons.push "Extended search does not support search by dependencies."
+    end
+    opts.on("--supplements", "Search for packages which supplement the search strings.") do |a|
+      unsupported = true
+      unsupported_reasons.push "Extended search does not support search by dependencies."
+    end
+    opts.on("--conflicts", "Search packages conflicting with search strings.") do |a|
+      unsupported = true
+      unsupported_reasons.push "Extended search does not support search by dependencies."
+    end
+    opts.on("--obsoletes", "Search for packages which obsolete the search strings.") do |a|
+      unsupported = true
+      unsupported_reasons.push "Extended search does not support search by dependencies."
+    end
+    opts.on("-n", "--name", "Useful together with dependency options, otherwise searching in package name is default.") do |a|
+    end
+    opts.on("-f", "--file-list", "Search for a match in the file list of packages.") do |a|
+      unsupported = true
+      unsupported_reasons.push "Extended search does not support search in file list."
+    end
+    opts.on("-d", "--search-descriptions", "Search also in package summaries and descriptions.") do |a|
+      unsupported = true
+      unsupported_reasons.push "Extended search does not support search in summaries and descriptions."
+    end
+    opts.on("-C", "--case-sensitive", "Perform case-sensitive search.") do |a|
+  #TBD
+    end
+    opts.on("-i", "--installed-only", "Show only installed packages.") do |a|
+  #TBD
+    end
+    opts.on("-u", "--not-installed-only", "Show only packages which are not installed.") do |a|
+  #TBD
+    end
+    opts.on("-t", "--type <TYPE>", "Search only for packages of the specified type.") do |a|
+  #TBD
+    end
+    opts.on("-r", "--repo <ALIAS|#|URI>", "Search only in the specified repository.") do |a|
+  #TBD
+    end
+    opts.on("--sort-by-name", "Sort packages by name (default).") do |a|
+  #TBD
+    end
+    opts.on("--sort-by-repo", "Sort packages by repository.") do |a|
+  #TBD
+    end
+    opts.on("-g", "--group-by-module", "Group the results by module (default: group by package)") do |a|
+      options[:group_by_module] = a
+    end
+    opts.on("-d", "--details", "Display more detailed information about found packages") do |a|
+      options[:details] = a
+    end
+    opts.on("-v", "--verbose", "Display more detailed information about found packages") do |a|
+      options[:details] = a
+    end
+    opts.on("--xmlout", "Switch to XML output") do |a|
+      options[:xmlout] = a
+    end
+    # hide options implemented only for forwarding from 'zypper search', which are not implemented
+    opts.on("-h", "--help", "Display this help") do
+      HIDDEN_SWITCHES = [ "--match-words", "--provides", "--recommends", "--requires", "--suggests",
+  		       	"--supplements", "--conflicts", "--obsoletes", "--name", "--file-list",
+  		       	"--search-descriptions",
+  			# TBD: review those from here below
+      		        "--case-sensitive", "--installed-only", "--not-installed-only", "--type <TYPE>",
+  		       	"--repo <ALIAS|#|URI>", "--sort-by-name", "--sort-by-repo", "--verbose"
+  
+      ]
+      #Typecast opts to a string, split into an array of lines, delete the line 
+      #if it contains the argument, and then rejoins them into a string
+      puts opts.to_s.split("\n").delete_if { |line|
+        HIDDEN_SWITCHES.any? { |hidden_switch| line =~ /#{hidden_switch}/ }
+      }.join("\n") 
+      exit
+    end
+  end.parse!
+rescue => e
+  # intentionally kept to continue - because of 'zypper search forwarding'
+  puts "Could not parse the options: #{e.message}\n"
+end
 
-Extended search for packages covering all potential SLE modules by querying RMT/SCC.
-This operation needs access to a network.
-
-Same as for the normal search operation the search string can be a part of a package
-name unless the option --match-exact is used.
-
-"
-
-  opts.on("-x", "--match-exact", "Searches for an exact match of the search strings.") do |a|
-    options[:match_exact] = a
-  end
-  opts.on("-g", "--group-by-module", "Group the results by module (default: group by package)") do |a|
-    options[:group_by_module] = a
-  end
-  opts.on("-d", "--details", "Display more detailed information about found packages") do |a|
-    options[:details] = a
-  end
-  opts.on("", "--xmlout", "Switch to XML output") do |a|
-    options[:xmlout] = a
-  end
-
-end.parse!
+if unsupported
+  # may appear from zypper search forwarding
+  puts "Cannot perform extended package search:\n\n"
+  puts unsupported_reasons.uniq.join("\n")
+  exit
+end
 
 results = []
 
