@@ -1,4 +1,9 @@
 -------------------------------------------------------------------
+Thu Nov  1 11:53:56 UTC 2018 - jsrain@suse.cz
+
+- added command to activate respective module (gh#2)
+
+-------------------------------------------------------------------
 Tue May 15 06:16:23 UTC 2018 - jsrain@suse.cz
 
 - include the module ID with its user-readable name (bsc#1092922)
