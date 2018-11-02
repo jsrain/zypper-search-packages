@@ -15,7 +15,7 @@ def search_pkgs_in_repos(options, search_pat)
   repos.each do | repo |
     pn = Pathname.new(repo)
     reponame = pn.basename.to_s
-    pkg_status = 'Available'
+    pkg_status = "Available in repo #{reponame}"
   
     if reponame == '@System'
       reponame = 'Installed'
@@ -58,11 +58,52 @@ def search_pkgs_in_repos(options, search_pat)
   return ret
 end
 
+def search_pkgs_in_modules(options, search_pat)
+  results = []
+  search_pat.each do |pkg_name|
+    begin
+      found = SUSE::Connect::PackageSearch.search pkg_name
+    rescue => e
+      print "Could not search for the package: #{e.class}: #{e.message}\n"
+      found = []
+    end
+  
+    if options[:match_exact]
+      found.select! do | pkg |
+        pkg["name"] == pkg_name
+      end
+    end
+  
+    found.each do | pkg |
+      name = pkg["name"]
+      version = pkg["version"]
+      release = pkg["release"]
+      arch = pkg["arch"]
+      pkg["products"].each do | product |
+        p_name = product["name"]
+        p_id = product["identifier"]
+        p_name = "#{p_name} (#{p_id})"
+        p_edition = product["edition"]
+        p_arch = product["architecture"]
+        p_free = product["free"]
+        p_connect_string = "SUSEConnect --product #{p_id}"
+        unless p_free
+          p_connect_string += " -r ADDITIONAL REGCODE"
+        end
+        results.push([name, version, release, arch, p_id, p_name, p_edition, p_arch, p_free, p_connect_string])
+      end
+    end
+  end
+  results
+end
+
 options = {
     :match_exact => false,
     :exact_match => false,
     :xmlout => false,
     :group_by_module => false,
+    :sourt_by_name => false,
+    :sourt_by_repo => false,
     :details => false
 }
 
@@ -144,19 +185,25 @@ begin
   #TBD
     end
     opts.on("-t", "--type <TYPE>", "Search only for packages of the specified type.") do |a|
-  #TBD
+      unless a == "package"
+        unsupported = true
+	unsupported_reasons.push "Extended package search can only search for the resolvable type 'package'."
+      end
     end
     opts.on("-r", "--repo <ALIAS|#|URI>", "Search only in the specified repository.") do |a|
   #TBD
     end
     opts.on("--sort-by-name", "Sort packages by name (default).") do |a|
-  #TBD
+      options[:sort_by_name] = a
     end
-    opts.on("--sort-by-repo", "Sort packages by repository.") do |a|
-  #TBD
+    opts.on("--sort-by-repo", "Sort packages by repository or module.") do |a|
+      options[:sort_by_repo] = a
     end
     opts.on("-g", "--group-by-module", "Group the results by module (default: group by package)") do |a|
       options[:group_by_module] = a
+    end
+    opts.on("--no-local-repos", "Do not search installed packages and packages in available repositories.") do |a|
+      options[:no_local_repos] = a
     end
     opts.on("-d", "--details", "Display more detailed information about found packages") do |a|
       options[:details] = a
@@ -174,7 +221,7 @@ begin
   		       	"--search-descriptions",
   			# TBD: review those from here below
       		        "--case-sensitive", "--installed-only", "--not-installed-only", "--type <TYPE>",
-  		       	"--repo <ALIAS|#|URI>", "--sort-by-name", "--sort-by-repo", "--verbose"
+  		       	"--repo <ALIAS|#|URI>", "--verbose"
   
       ]
       #Typecast opts to a string, split into an array of lines, delete the line 
@@ -197,46 +244,12 @@ if unsupported
   exit
 end
 
-results = []
 
-params.each do |pkg_name|
-  begin
-    found = SUSE::Connect::PackageSearch.search pkg_name
-  rescue => e
-    print "Could not search for the package: #{e.class}: #{e.message}\n"
-    found = []
-  end
-
-  if options[:match_exact]
-    found.select! do | pkg |
-      pkg["name"] == pkg_name
-    end
-  end
-
-  found.each do | pkg |
-    name = pkg["name"]
-    version = pkg["version"]
-    release = pkg["release"]
-    arch = pkg["arch"]
-    pkg["products"].each do | product |
-      p_name = product["name"]
-      p_id = product["identifier"]
-      p_name = "#{p_name} (#{p_id})"
-      p_edition = product["edition"]
-      p_arch = product["architecture"]
-      p_free = product["free"]
-      p_connect_string = "SUSEConnect --product #{p_id}"
-      unless p_free
-        p_connect_string += " -r ADDITIONAL REGCODE"
-      end
-      results.push([name, version, release, arch, p_id, p_name, p_edition, p_arch, p_free, p_connect_string])
-    end
-  end
+results = search_pkgs_in_modules(options, params)
+unless options[:no_local_repos]
+  repo_results = search_pkgs_in_repos(options, params)
+  results.concat repo_results
 end
-
-
-repo_results = search_pkgs_in_repos(options, params)
-results.concat repo_results
 
 if results.empty?
   if ! options[:xmlout]
@@ -268,7 +281,7 @@ puts "Following packages were found in following modules:\n\n"
 
 if options[:details]
   results.map! { | entry |
-    [ "#{entry[0]}-#{entry[1]}-#{entry[2]}.#{entry[3]}", entry[4] ]
+    [ "#{entry[0]}-#{entry[1]}-#{entry[2]}.#{entry[3]}", entry[4], entry[9].to_s ]
   }
 else
   results.map! { | entry |
@@ -293,7 +306,18 @@ if options[:group_by_module]
     end
   end
   header = ["Module or Repository", "Package"]
+elsif options[:sort_by_name]
+  results.sort! { | a, b |
+    a[0] <=> b[0]
+  }
+elsif options[:sort_by_module]
+  results.sort! { | a, b |
+    a[1] <=> b[1]
+  }
 end
+
+
+
 #else
   results.unshift header
   max_lengths = header.size.times.map {0}
@@ -308,6 +332,8 @@ end
   results.insert(1, separator)
 
   format = max_lengths.map { |_| "%-#{_}s" }.join(" " * 2)
+  puts format
+  puts results[2].to_s
   results.each do | entry |
     puts format % entry
   end
