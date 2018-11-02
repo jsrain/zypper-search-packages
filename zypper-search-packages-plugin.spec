@@ -30,6 +30,7 @@ Requires:       zypper >= 1.11.38
 Requires:       rubygem(%{rb_default_ruby_abi}:suse-connect) >= 0.3.9
 Supplements:    packageand(zypper:SUSEConnect)
 Obsoletes:	zypper-package-search-plugin
+Provides:	supports-zypper-cli-forwarding
 BuildArch:      noarch
 # SUSEConnect does not build for i586 and s390 and is not supported on those architectures
 # bsc#1088552
