@@ -15,7 +15,7 @@ def search_pkgs_in_repos(options, search_pat)
   repos.each do | repo |
     pn = Pathname.new(repo)
     reponame = pn.basename.to_s
-    pkg_status = 'Available'
+    pkg_status = "Available in repo #{reponame}"
   
     if reponame == '@System'
       reponame = 'Installed'
@@ -45,98 +45,235 @@ def search_pkgs_in_repos(options, search_pat)
   local_results.each do | p |
     search_pat.each do | q |
       if options[:match_exact]
-        if p[0] == q
-          ret.push p
-        end
+        if options[:case_sensitive]
+          if p[0] == q
+            ret.push p
+          end
+	else
+          if p[0].downcase == q.downcase
+            ret.push p
+          end
+	end
       else
-        if p[0].include? q
-          ret.push p
-        end
+        if options[:case_sensitive]
+          if p[0].include? q
+            ret.push p
+          end
+	else
+	  if p[0].downcase.include? q.downcase
+            ret.push p
+          end
+	end
       end
     end
   end
   return ret
 end
 
+def search_pkgs_in_modules(options, search_pat)
+  results = []
+  search_pat.each do |pkg_name|
+    begin
+      found = SUSE::Connect::PackageSearch.search pkg_name
+    rescue => e
+      print "Could not search for the package: #{e.class}: #{e.message}\n"
+      found = []
+    end
+  
+    if options[:match_exact]
+      found.select! do | pkg |
+        options[:case_sensitive] ? pkg["name"] == pkg_name : pkg["name"].downcase == pkg_name.downcase
+      end
+    elsif options[:case_sensitive]
+      found.select! do | pkg |
+        pkg["name"].include? pkg_name
+      end
+    end
+  
+    found.each do | pkg |
+      name = pkg["name"]
+      version = pkg["version"]
+      release = pkg["release"]
+      arch = pkg["arch"]
+      pkg["products"].each do | product |
+        p_name = product["name"]
+        p_id = product["identifier"]
+        p_name = "#{p_name} (#{p_id})"
+        p_edition = product["edition"]
+        p_arch = product["architecture"]
+        p_free = product["free"]
+        p_connect_string = "SUSEConnect --product #{p_id}"
+        unless p_free
+          p_connect_string += " -r ADDITIONAL REGCODE"
+        end
+        results.push([name, version, release, arch, p_id, p_name, p_edition, p_arch, p_free, p_connect_string])
+      end
+    end
+  end
+  results
+end
+
 options = {
     :match_exact => false,
     :exact_match => false,
+    :case_sensitive => false,
     :xmlout => false,
     :group_by_module => false,
-    :details => false
+    :sourt_by_name => false,
+    :sourt_by_repo => false,
+    :details => false,
+    :noop => false
 }
+
+unsupported = false
+
+unsupported_reasons = Array.new
 
 STDOUT.sync = true
 
 save_argv = Array.new(ARGV)
 params = ARGV
 
-OptionParser.new do |opts|
-  opts.banner = "Usage: zypper search-packages [options] package1 [package2 [...]]
-
-Extended search for packages covering all potential SLE modules by querying RMT/SCC.
-This operation needs access to a network.
-
-Same as for the normal search operation the search string can be a part of a package
-name unless the option --match-exact is used.
-
-"
-
-  opts.on("-x", "--match-exact", "Searches for an exact match of the search strings.") do |a|
-    options[:match_exact] = a
-  end
-  opts.on("-g", "--group-by-module", "Group the results by module (default: group by package)") do |a|
-    options[:group_by_module] = a
-  end
-  opts.on("-d", "--details", "Display more detailed information about found packages") do |a|
-    options[:details] = a
-  end
-  opts.on("", "--xmlout", "Switch to XML output") do |a|
-    options[:xmlout] = a
-  end
-
-end.parse!
-
-results = []
-
-params.each do |pkg_name|
-  begin
-    found = SUSE::Connect::PackageSearch.search pkg_name
-  rescue => e
-    print "Could not search for the package: #{e.class}: #{e.message}\n"
-    found = []
-  end
-
-  if options[:match_exact]
-    found.select! do | pkg |
-      pkg["name"] == pkg_name
+begin
+  OptionParser.new do |opts|
+    opts.banner = "Usage: zypper search-packages [options] package1 [package2 [...]]
+  
+  Extended search for packages covering all potential SLE modules by querying RMT/SCC.
+  This operation needs access to a network.
+  
+  Same as for the normal search operation the search string can be a part of a package
+  name unless the option --match-exact is used.
+  
+  "
+  
+    opts.on("--match-substrings", "Search for a match to partial words (default).") do |a|
     end
-  end
-
-  found.each do | pkg |
-    name = pkg["name"]
-    version = pkg["version"]
-    release = pkg["release"]
-    arch = pkg["arch"]
-    pkg["products"].each do | product |
-      p_name = product["name"]
-      p_id = product["identifier"]
-      p_name = "#{p_name} (#{p_id})"
-      p_edition = product["edition"]
-      p_arch = product["architecture"]
-      p_free = product["free"]
-      p_connect_string = "SUSEConnect --product #{p_id}"
-      unless p_free
-        p_connect_string += " -r ADDITIONAL REGCODE"
+    opts.on("--match-words", "Search for a match to whole words only. Not supported by extended search.") do |a|
+      unsupported = true
+      unsupported_reasons.push "Extended search does not support search by whole words."
+    end
+    opts.on("-x", "--match-exact", "Search for an exact match of the search strings.") do |a|
+      options[:match_exact] = a
+    end
+    opts.on("--provides", "Search for packages which provide the search strings.") do |a|
+      unsupported = true
+      unsupported_reasons.push "Extended search does not support search by dependencies."
+    end
+    opts.on("--recommends", "Search for packages which recommend the search strings.") do |a|
+      unsupported = true
+      unsupported_reasons.push "Extended search does not support search by dependencies."
+    end
+    opts.on("--requires", "Search for packages which require the search strings.") do |a|
+      unsupported = true
+      unsupported_reasons.push "Extended search does not support search by dependencies."
+    end
+    opts.on("--suggests", "Search for packages which suggest the search strings.") do |a|
+      unsupported = true
+      unsupported_reasons.push "Extended search does not support search by dependencies."
+    end
+    opts.on("--supplements", "Search for packages which supplement the search strings.") do |a|
+      unsupported = true
+      unsupported_reasons.push "Extended search does not support search by dependencies."
+    end
+    opts.on("--conflicts", "Search packages conflicting with search strings.") do |a|
+      unsupported = true
+      unsupported_reasons.push "Extended search does not support search by dependencies."
+    end
+    opts.on("--obsoletes", "Search for packages which obsolete the search strings.") do |a|
+      unsupported = true
+      unsupported_reasons.push "Extended search does not support search by dependencies."
+    end
+    opts.on("-n", "--name", "Useful together with dependency options, otherwise searching in package name is default.") do |a|
+    end
+    opts.on("-f", "--file-list", "Search for a match in the file list of packages.") do |a|
+      unsupported = true
+      unsupported_reasons.push "Extended search does not support search in file list."
+    end
+    opts.on("-d", "--search-descriptions", "Search also in package summaries and descriptions.") do |a|
+      unsupported = true
+      unsupported_reasons.push "Extended search does not support search in summaries and descriptions."
+    end
+    opts.on("-C", "--case-sensitive", "Perform case-sensitive search.") do |a|
+      options[:case_sensitive] = a;
+    end
+    opts.on("-i", "--installed-only", "Show only installed packages.") do |a|
+      # not an advertised option, can only be forwarded from zypper search, exit immediately
+      options[:noop] = a
+    end
+    opts.on("-u", "--not-installed-only", "Show only packages which are not installed.") do |a|
+      # not an advertised option, can only be forwarded from zypper search, done automatically
+    end
+    opts.on("-t", "--type <TYPE>", "Search only for packages of the specified type.") do |a|
+      unless a == "package"
+        unsupported = true
+	unsupported_reasons.push "Extended package search can only search for the resolvable type 'package'."
       end
-      results.push([name, version, release, arch, p_id, p_name, p_edition, p_arch, p_free, p_connect_string])
     end
-  end
+    opts.on("-r", "--repo <ALIAS|#|URI>", "Search only in the specified repository.") do |a|
+      # not an advertised option, can only be forwarded from zypper search, exit immediately
+      options[:noop] = a
+    end
+    opts.on("--sort-by-name", "Sort packages by name (default).") do |a|
+      options[:sort_by_name] = a
+    end
+    opts.on("--sort-by-repo", "Sort packages by repository or module.") do |a|
+      options[:sort_by_repo] = a
+    end
+    opts.on("-g", "--group-by-module", "Group the results by module (default: group by package)") do |a|
+      options[:group_by_module] = a
+    end
+    opts.on("--no-local-repos", "Do not search installed packages and packages in available repositories.") do |a|
+      options[:no_local_repos] = true
+    end
+    opts.on("-d", "--details", "Display more detailed information about found packages") do |a|
+      options[:details] = a
+    end
+    opts.on("-v", "--verbose", "Display more detailed information about found packages") do |a|
+      options[:details] = a
+    end
+    opts.on("--xmlout", "Switch to XML output") do |a|
+      options[:xmlout] = a
+    end
+    # hide options implemented only for forwarding from 'zypper search', which are not implemented
+    opts.on("-h", "--help", "Display this help") do
+      HIDDEN_SWITCHES = [ "--match-words", "--provides", "--recommends", "--requires", "--suggests",
+  		       	"--supplements", "--conflicts", "--obsoletes", "--name", "--file-list",
+  		       	"--search-descriptions",
+  			# TBD: review those from here below
+      		        "--installed-only", "--not-installed-only", "--type <TYPE>",
+  		       	"--repo <ALIAS|#|URI>", "--verbose"
+  
+      ]
+      #Typecast opts to a string, split into an array of lines, delete the line 
+      #if it contains the argument, and then rejoins them into a string
+      puts opts.to_s.split("\n").delete_if { |line|
+        HIDDEN_SWITCHES.any? { |hidden_switch| line =~ /#{hidden_switch}/ }
+      }.join("\n") 
+      exit
+    end
+  end.parse!
+rescue => e
+  # intentionally kept to continue - because of 'zypper search forwarding'
+  puts "Could not parse the options: #{e.message}\n"
+end
+
+if options[:noop]
+  exit 0
+end
+
+if unsupported
+  # may appear from zypper search forwarding
+  puts "Cannot perform extended package search:\n\n"
+  puts unsupported_reasons.uniq.join("\n")
+  exit 1
 end
 
 
-repo_results = search_pkgs_in_repos(options, params)
-results.concat repo_results
+results = search_pkgs_in_modules(options, params)
+unless options[:no_local_repos]
+  repo_results = search_pkgs_in_repos(options, params)
+  results.concat repo_results
+end
 
 if results.empty?
   if ! options[:xmlout]
@@ -168,7 +305,7 @@ puts "Following packages were found in following modules:\n\n"
 
 if options[:details]
   results.map! { | entry |
-    [ "#{entry[0]}-#{entry[1]}-#{entry[2]}.#{entry[3]}", entry[4] ]
+    [ "#{entry[0]}-#{entry[1]}-#{entry[2]}.#{entry[3]}", entry[4], entry[9].to_s ]
   }
 else
   results.map! { | entry |
@@ -193,7 +330,18 @@ if options[:group_by_module]
     end
   end
   header = ["Module or Repository", "Package"]
+elsif options[:sort_by_name]
+  results.sort! { | a, b |
+    a[0] <=> b[0]
+  }
+elsif options[:sort_by_module]
+  results.sort! { | a, b |
+    a[1] <=> b[1]
+  }
 end
+
+
+
 #else
   results.unshift header
   max_lengths = header.size.times.map {0}
@@ -208,6 +356,8 @@ end
   results.insert(1, separator)
 
   format = max_lengths.map { |_| "%-#{_}s" }.join(" " * 2)
+  puts format
+  puts results[2].to_s
   results.each do | entry |
     puts format % entry
   end
