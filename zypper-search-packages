@@ -45,13 +45,25 @@ def search_pkgs_in_repos(options, search_pat)
   local_results.each do | p |
     search_pat.each do | q |
       if options[:match_exact]
-        if p[0] == q
-          ret.push p
-        end
+        if options[:case_sensitive]
+          if p[0] == q
+            ret.push p
+          end
+	else
+          if p[0].downcase == q.downcase
+            ret.push p
+          end
+	end
       else
-        if p[0].include? q
-          ret.push p
-        end
+        if options[:case_sensitive]
+          if p[0].include? q
+            ret.push p
+          end
+	else
+	  if p[0].downcase.include? q.downcase
+            ret.push p
+          end
+	end
       end
     end
   end
@@ -70,7 +82,11 @@ def search_pkgs_in_modules(options, search_pat)
   
     if options[:match_exact]
       found.select! do | pkg |
-        pkg["name"] == pkg_name
+        options[:case_sensitive] ? pkg["name"] == pkg_name : pkg["name"].downcase == pkg_name.downcase
+      end
+    elsif options[:case_sensitive]
+      found.select! do | pkg |
+        pkg["name"].include? pkg_name
       end
     end
   
@@ -100,11 +116,13 @@ end
 options = {
     :match_exact => false,
     :exact_match => false,
+    :case_sensitive => false,
     :xmlout => false,
     :group_by_module => false,
     :sourt_by_name => false,
     :sourt_by_repo => false,
-    :details => false
+    :details => false,
+    :noop => false
 }
 
 unsupported = false
@@ -176,13 +194,14 @@ begin
       unsupported_reasons.push "Extended search does not support search in summaries and descriptions."
     end
     opts.on("-C", "--case-sensitive", "Perform case-sensitive search.") do |a|
-  #TBD
+      options[:case_sensitive] = a;
     end
     opts.on("-i", "--installed-only", "Show only installed packages.") do |a|
-  #TBD
+      # not an advertised option, can only be forwarded from zypper search, exit immediately
+      options[:noop] = a
     end
     opts.on("-u", "--not-installed-only", "Show only packages which are not installed.") do |a|
-  #TBD
+      # not an advertised option, can only be forwarded from zypper search, done automatically
     end
     opts.on("-t", "--type <TYPE>", "Search only for packages of the specified type.") do |a|
       unless a == "package"
@@ -191,7 +210,8 @@ begin
       end
     end
     opts.on("-r", "--repo <ALIAS|#|URI>", "Search only in the specified repository.") do |a|
-  #TBD
+      # not an advertised option, can only be forwarded from zypper search, exit immediately
+      options[:noop] = a
     end
     opts.on("--sort-by-name", "Sort packages by name (default).") do |a|
       options[:sort_by_name] = a
@@ -203,7 +223,7 @@ begin
       options[:group_by_module] = a
     end
     opts.on("--no-local-repos", "Do not search installed packages and packages in available repositories.") do |a|
-      options[:no_local_repos] = a
+      options[:no_local_repos] = true
     end
     opts.on("-d", "--details", "Display more detailed information about found packages") do |a|
       options[:details] = a
@@ -220,7 +240,7 @@ begin
   		       	"--supplements", "--conflicts", "--obsoletes", "--name", "--file-list",
   		       	"--search-descriptions",
   			# TBD: review those from here below
-      		        "--case-sensitive", "--installed-only", "--not-installed-only", "--type <TYPE>",
+      		        "--installed-only", "--not-installed-only", "--type <TYPE>",
   		       	"--repo <ALIAS|#|URI>", "--verbose"
   
       ]
@@ -237,11 +257,15 @@ rescue => e
   puts "Could not parse the options: #{e.message}\n"
 end
 
+if options[:noop]
+  exit 0
+end
+
 if unsupported
   # may appear from zypper search forwarding
   puts "Cannot perform extended package search:\n\n"
   puts unsupported_reasons.uniq.join("\n")
-  exit
+  exit 1
 end
 
 
