@@ -17,7 +17,7 @@
 
 
 Name:           zypper-search-packages-plugin
-Version:        0.6
+Version:        0.7
 Release:        0
 Summary:        Zypper subcommand for online package search
 License:        GPL-2.0-only

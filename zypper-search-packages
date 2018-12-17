@@ -222,7 +222,7 @@ begin
     opts.on("-g", "--group-by-module", "Group the results by module (default: group by package)") do |a|
       options[:group_by_module] = a
     end
-    opts.on("--no-local-repos", "Do not search installed packages and packages in available repositories.") do |a|
+    opts.on("--no-query-local", "Do not search installed packages and packages in available repositories.") do |a|
       options[:no_local_repos] = true
     end
     opts.on("-d", "--details", "Display more detailed information about found packages") do |a|
@@ -356,8 +356,6 @@ end
   results.insert(1, separator)
 
   format = max_lengths.map { |_| "%-#{_}s" }.join(" " * 2)
-  puts format
-  puts results[2].to_s
   results.each do | entry |
     puts format % entry
   end
