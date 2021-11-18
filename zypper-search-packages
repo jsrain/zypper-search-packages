@@ -334,7 +334,7 @@ elsif options[:sort_by_name]
   results.sort! { | a, b |
     a[0] <=> b[0]
   }
-elsif options[:sort_by_module]
+elsif options[:sort_by_repo]
   results.sort! { | a, b |
     a[1] <=> b[1]
   }
