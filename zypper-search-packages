@@ -225,7 +225,7 @@ begin
     opts.on("--no-query-local", "Do not search installed packages and packages in available repositories.") do |a|
       options[:no_local_repos] = true
     end
-    opts.on("-d", "--details", "Display more detailed information about found packages") do |a|
+    opts.on("-s", "--details", "Display more detailed information about found packages") do |a|
       options[:details] = a
     end
     opts.on("-v", "--verbose", "Display more detailed information about found packages") do |a|
